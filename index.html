@@ -361,7 +361,8 @@ function calc() {
   else if(ra>100){raC="dark";raI="Better for dark beers";raD="High alkalinity — good for stouts, porters, dark ales";}
 
   const IONS=[{k:"ca",l:"Calcium"},{k:"mg",l:"Magnesium"},{k:"na",l:"Sodium"},{k:"cl",l:"Chloride"},{k:"so4",l:"Sulfate"},{k:"hco3",l:"Bicarbonate"}];
-  const warnings=IONS.filter(({k})=>fin[k]>(t[k]||0)*1.15).map(({k,l})=>`${l} (${fin[k]} ppm) slightly exceeds style target of ${t[k]} ppm.`);
+  // Warn only when SOURCE water already exceeds target — these ions can't be reduced by adding salts, RO dilution is needed
+  const warnings=IONS.filter(({k})=>(base[k]||0)>(t[k]||0)*1.1).map(({k,l})=>`${l} is ${Math.round(base[k])} ppm in your source water but the ${style.name} target is ${t[k]} ppm. Salt additions cannot reduce this — blend with RO water to dilute.`);
 
   const ins=[];
   if(fin.so4>150)ins.push({t:"i",m:"High sulfate (>150 ppm) enhances hop bitterness and dryness."});
@@ -384,6 +385,8 @@ function calc() {
 
   return {
     add:{gypsum:+add.gypsum.toFixed(2),calciumChloride:+add.calciumChloride.toFixed(2),epsomSalt:+add.epsomSalt.toFixed(2),bakingSoda:+add.bakingSoda.toFixed(2),chalk:+add.chalk.toFixed(2)},
+    // rawSource = exact values from input fields (no rounding, no dilution applied)
+    rawSource:{ca:S.profile.ca,mg:S.profile.mg,na:S.profile.na,cl:S.profile.cl,so4:S.profile.so4,hco3:S.profile.hco3,ph:S.profile.ph},
     base:{ca:Math.round(base.ca),mg:Math.round(base.mg),na:Math.round(base.na),cl:Math.round(base.cl),so4:Math.round(base.so4),hco3:Math.round(base.hco3)},
     fin,t,ratio:+ratio.toFixed(2),rl,rd,ra:+ra.toFixed(1),raC,raI,raD,warnings,ins,style,suited:suited.slice(0,4),notSuited:notSuited.slice(0,4),
   };
@@ -391,7 +394,6 @@ function calc() {
 
 function render(r) {
   const IONS=[{k:"ca",l:"Ca"},{k:"mg",l:"Mg"},{k:"na",l:"Na"},{k:"cl",l:"Cl"},{k:"so4",l:"SO4"},{k:"hco3",l:"HCO3"}];
-  const LONS=[{k:"ca",l:"Calcium"},{k:"mg",l:"Magnesium"},{k:"na",l:"Sodium"},{k:"cl",l:"Chloride"},{k:"so4",l:"Sulfate"},{k:"hco3",l:"Bicarbonate"}];
   const SL=[{key:"gypsum",...SALTS.gypsum},{key:"calciumChloride",...SALTS.calciumChloride},{key:"epsomSalt",...SALTS.epsomSalt},{key:"bakingSoda",...SALTS.bakingSoda},{key:"chalk",...SALTS.chalk}];
 
   const warnH=r.warnings.length?`<div class="warn-box fade-in"><div class="wt">Note</div>${r.warnings.map(w=>`<p>- ${w}</p>`).join("")}</div>`:"";
@@ -401,7 +403,7 @@ function render(r) {
     <div class="profile-compare">
       <div class="pc-col">
         <div class="pc-head src">Source Water</div>
-        ${IONS.map(({k,l})=>`<div class="pc-row"><span class="pc-ion">${l}</span><span class="pc-val">${r.base[k]}<span class="pc-unit">ppm</span></span></div>`).join("")}
+        ${IONS.map(({k,l})=>`<div class="pc-row"><span class="pc-ion">${l}</span><span class="pc-val">${r.rawSource[k]}<span class="pc-unit">ppm</span></span></div>`).join("")}
       </div>
       <div class="pc-col">
         <div class="pc-head tgt">Target (${r.style.name})</div>
@@ -419,7 +421,6 @@ function render(r) {
     <div class="add-grid">${SL.map(s=>{const g=r.add[s.key];return `<div class="add-card ${g===0?"none":""}"><div class="add-formula">${s.formula}</div><div class="add-name">${s.label}</div><div class="add-val">${g===0?"--":g}</div>${g>0?`<div class="add-unit">grams</div>`:""}</div>`;}).join("")}</div>
   </div>`;
 
-  const barsH=LONS.map(({k,l})=>{const fin=r.fin[k]||0,tgt=r.t[k]||0,src=r.base[k]||0,max=Math.max(fin,tgt,1)*1.2,over=fin>tgt*1.15;return `<div class="bar-item"><div class="bar-header"><span class="bar-lbl">${l}</span><span class="bar-val ${over?"over":""}">${fin} ppm</span></div><div class="bar-track">${src>0?`<div class="bar-src" style="width:${Math.min(src/max*100,100).toFixed(1)}%"></div>`:""}<div class="bar-fill ${over?"over":""}" style="width:0" data-w="${Math.min(fin/max*100,100).toFixed(1)}"></div><div class="bar-tgt" style="left:${Math.min(tgt/max*100,100).toFixed(1)}%"></div></div><div class="bar-foot"><span>0</span><span>target: ${tgt}</span></div></div>`;}).join("");
 
   const cl=Math.min(r.ratio,4),ang=(-120+(cl/4)*240)*Math.PI/180,nx=(60+38*Math.sin(ang)).toFixed(1),ny=(70-38*Math.cos(ang)).toFixed(1);
   const rc=r.ratio>=2?"#22c55e":r.ratio<1?"#3b82f6":"#fbbf24";
@@ -432,7 +433,6 @@ function render(r) {
   const suitH=`${r.suited.map(s=>`<div style="display:flex;align-items:center;gap:7px;font-size:11px;margin-bottom:5px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block"></span>${s}</div>`).join("")}${r.notSuited.map(s=>`<div style="display:flex;align-items:center;gap:7px;font-size:11px;margin-bottom:5px;color:var(--muted2);"><span style="width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;display:inline-block"></span>${s}</div>`).join("")}`;
 
   document.getElementById("resultsArea").innerHTML=`<div class="results">${warnH}${pcH}${addH}
-    <div class="card fade-in"><div class="card-head"><span class="card-title">Adjusted Profile vs Target</span></div><div class="card-body">${barsH}<div style="font-size:9px;color:var(--muted2);margin-top:6px;font-family:'DM Mono',monospace">dim = source | amber = adjusted | | = target</div></div></div>
     <div class="stats-row fade-in"><div class="stat-card"><div class="stat-label">SO4 : Cl Ratio</div>${gaugeH}</div><div class="stat-card"><div class="stat-label">Mash pH Risk (Residual Alkalinity)</div>${raH}</div></div>
     <div class="card fade-in"><div class="card-head"><span class="card-title">Brewing Insights</span></div><div class="card-body">${insH}</div></div>
     <div class="card fade-in"><div class="card-head"><span class="card-title">Source Water Suitability</span></div><div class="card-body">${suitH}</div></div>
