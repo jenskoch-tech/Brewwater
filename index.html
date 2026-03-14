@@ -277,7 +277,7 @@ const SALTS = {
   epsomSalt:       {label:"Epsom Salt",       formula:"MgSO4",    ca:0,    so4:103,   mg:26, na:0,  cl:0,   hco3:0  },
   bakingSoda:      {label:"Baking Soda",      formula:"NaHCO3",   ca:0,    so4:0,     mg:0,  na:72, cl:0,   hco3:191},
   picklingLime:    {label:"Pickling Lime",    formula:"Ca(OH)2",  ca:143,  so4:0,     mg:0,  na:0,  cl:0,   hco3:435},
-  tableSalt:       {label:"Table Salt",       formula:"NaCl",     ca:0,    so4:0,     mg:0,  na:104,cl:160, hco3:0  },
+  tableSalt:       {label:"Non-Iodized Salt", formula:"NaCl ⚠",   ca:0,    so4:0,     mg:0,  na:104,cl:160, hco3:0  },
   chalk:           {label:"Chalk (avoid)",    formula:"CaCO3",    ca:106,  so4:0,     mg:0,  na:0,  cl:0,   hco3:158},
 };
 
@@ -398,6 +398,8 @@ function calc() {
   if(add.bakingSoda>0)   ins.push({t:"i",m:"Baking Soda raises alkalinity for dark beers — watch sodium levels, keep below 100 ppm."});
   // ── Chlorine reminder for tap water users
   if(!S.ro&&S.dilution<100) ins.push({t:"w",m:"Using tap water? Add 1 Campden tablet (potassium metabisulfite) per 75L to neutralise chlorine/chloramine — even tiny amounts cause medicinal off-flavours."});
+  // Always show the non-iodized salt reminder
+  ins.push({t:"w",m:"If using Non-Iodized Salt (NaCl): always use non-iodized table salt or kosher salt — iodine is toxic to yeast even at low concentrations."});
   if(!ins.length) ins.push({t:"i",m:"Your source water closely matches this style — minimal additions needed!"});
 
   const src2=S.ro?{ca:0,mg:0,na:0,cl:0,so4:0,hco3:0}:applyDilution(S.profile,S.dilution);
@@ -409,7 +411,7 @@ function calc() {
   });
 
   return {
-    add:{gypsum:+add.gypsum.toFixed(2),calciumChloride:+add.calciumChloride.toFixed(2),epsomSalt:+add.epsomSalt.toFixed(2),bakingSoda:+add.bakingSoda.toFixed(2),picklingLime:+add.picklingLime.toFixed(2)},
+    add:{gypsum:+add.gypsum.toFixed(2),calciumChloride:+add.calciumChloride.toFixed(2),epsomSalt:+add.epsomSalt.toFixed(2),bakingSoda:+add.bakingSoda.toFixed(2),picklingLime:+add.picklingLime.toFixed(2),tableSalt:0},
     // rawSource = exact values from input fields (no rounding, no dilution applied)
     rawSource:{ca:S.profile.ca,mg:S.profile.mg,na:S.profile.na,cl:S.profile.cl,so4:S.profile.so4,hco3:S.profile.hco3,ph:S.profile.ph},
     base:{ca:Math.round(base.ca),mg:Math.round(base.mg),na:Math.round(base.na),cl:Math.round(base.cl),so4:Math.round(base.so4),hco3:Math.round(base.hco3)},
